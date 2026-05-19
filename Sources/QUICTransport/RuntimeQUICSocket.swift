@@ -1,8 +1,10 @@
 import NIOCore
 import NIOUDPTransport
 import QUICCore
+#if QUIVER_RUNTIME
 import QuiverRuntimeCore
 import Synchronization
+#endif
 
 #if canImport(FoundationEssentials)
 import FoundationEssentials
@@ -12,7 +14,9 @@ import Foundation
 
 public enum QUICSocketBackend: Sendable {
     case nio
+    #if QUIVER_RUNTIME
     case runtime(any QuiverRuntime)
+    #endif
 }
 
 public enum QUICSocketFactory {
@@ -24,12 +28,15 @@ public enum QUICSocketFactory {
         switch backend {
         case .nio:
             return NIOQUICSocket(configuration: udpConfiguration, platformOptions: platformOptions)
+        #if QUIVER_RUNTIME
         case .runtime(let runtime):
             return try RuntimeQUICSocket(runtime: runtime, udpConfiguration: udpConfiguration)
+        #endif
         }
     }
 }
 
+#if QUIVER_RUNTIME
 public enum RuntimeQUICSocketError: Error, Equatable, Sendable {
     case unsupportedAddress(SocketAddress)
     case unsupportedRuntimeAddress(RuntimeSocketAddress)
@@ -239,3 +246,4 @@ public final class RuntimeQUICSocket: QUICSocket, Sendable {
         }
     }
 }
+#endif
