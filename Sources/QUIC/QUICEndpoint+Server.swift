@@ -91,7 +91,8 @@ extension QUICEndpoint {
     public static func serve(
         host: String,
         port: UInt16,
-        configuration: QUICConfiguration
+        configuration: QUICConfiguration,
+        socketBackend: QUICSocketBackend = .nio
     ) async throws -> (endpoint: QUICEndpoint, runTask: Task<Void, Error>) {
         // Validate configuration consistency before creating the socket
         try configuration.validate()
@@ -114,7 +115,11 @@ extension QUICEndpoint {
             enableECN: socketConfig.enableECN,
             enableDF: socketConfig.enableDF
         )
-        let socket = NIOQUICSocket(configuration: udpConfig, platformOptions: platformOpts)
+        let socket = try QUICSocketFactory.makeSocket(
+            backend: socketBackend,
+            udpConfiguration: udpConfig,
+            platformOptions: platformOpts
+        )
         return try await serve(socket: socket, configuration: configuration)
     }
 

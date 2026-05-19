@@ -16,6 +16,32 @@ QUIC protocol implementation for Quiver. This package contains the transport, TL
 | `QUICConnection` | Lower-level connection state machine components used by the public `QUIC` target. |
 | `QuiverTestSupport` | Shared test support utilities for Quiver package tests. |
 
+## Transport Backends
+
+`QUICTransport` owns QUIC socket selection so higher-level packages do not need their own runtime systems. The default backend remains SwiftNIO through `NIOQUICSocket`. A Quiver runtime-backed backend is also available through `RuntimeQUICSocket` and `QUICSocketFactory`.
+
+Existing code keeps using NIO by default:
+
+```swift
+let socket = try QUICSocketFactory.makeSocket(
+	backend: .nio,
+	udpConfiguration: udpConfiguration,
+	platformOptions: platformOptions
+)
+```
+
+Runtime-backed code can opt in centrally:
+
+```swift
+let runtime = try DefaultQuiverRuntime()
+let socket = try QUICSocketFactory.makeSocket(
+	backend: .runtime(runtime),
+	udpConfiguration: udpConfiguration
+)
+```
+
+The high-level `QUICEndpoint.serve(host:port:configuration:socketBackend:)` and `QUICEndpoint.dial(address:timeout:socketBackend:)` convenience APIs also accept the same backend selector. HTTP/3, WebTransport, MOQ, and adapters should continue depending on QUIC rather than selecting epoll, NIO, or future IOCP/io_uring backends themselves.
+
 ## Installation
 
 Add the package to your `Package.swift`:

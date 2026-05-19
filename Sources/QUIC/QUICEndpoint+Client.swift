@@ -41,7 +41,8 @@ extension QUICEndpoint {
     /// ```
     public func dial(
         address: SocketAddress,
-        timeout: Duration = .seconds(30)
+        timeout: Duration = .seconds(30),
+        socketBackend: QUICSocketBackend = .nio
     ) async throws -> any QUICConnectionProtocol {
         guard !isServer else {
             throw QUICEndpointError.serverCannotConnect
@@ -69,7 +70,11 @@ extension QUICEndpoint {
             enableECN: socketConfig.enableECN,
             enableDF: socketConfig.enableDF
         )
-        let socket = NIOQUICSocket(configuration: udpConfig, platformOptions: platformOpts)
+        let socket = try QUICSocketFactory.makeSocket(
+            backend: socketBackend,
+            udpConfiguration: udpConfig,
+            platformOptions: platformOpts
+        )
         try await socket.start()
 
         // Set socket directly before running to avoid race condition

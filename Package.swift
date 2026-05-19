@@ -22,6 +22,14 @@ func nioDependencies() -> [Package.Dependency] {
     }
 }
 
+func runtimeDependencies() -> [Package.Dependency] {
+    if FileManager.default.fileExists(atPath: "../quiver-runtime") {
+        return [.package(path: "../quiver-runtime")]
+    } else {
+        return []
+    }
+}
+
 let package = Package(
     name: "quiver-quic",
     platforms: [
@@ -42,7 +50,7 @@ let package = Package(
         .library(name: "QUICConnection", targets: ["QUICConnection"]),
         .library(name: "QuiverTestSupport", targets: ["QuiverTestSupport"]),
     ],
-    dependencies: nioDependencies() + [
+    dependencies: nioDependencies() + runtimeDependencies() + [
         .package(url: "https://github.com/apple/swift-crypto.git", "3.0.0"..<"4.5.0"),
         .package(url: "https://github.com/apple/swift-certificates.git", from: "1.17.0"),
         .package(url: "https://github.com/apple/swift-asn1.git", from: "1.0.0"),
@@ -108,6 +116,7 @@ let package = Package(
             dependencies: [
                 "QUICCore",
                 "NIOUDPTransport",
+                .product(name: "QuiverRuntimeCore", package: "quiver-runtime"),
                 .product(name: "SystemPackage", package: "swift-system"),
             ],
             path: "Sources/QUICTransport"
@@ -173,6 +182,8 @@ let package = Package(
                 "QUICRecovery",
                 "QUICTransport",
                 "QuiverTestSupport",
+                .product(name: "QuiverRuntimeCore", package: "quiver-runtime"),
+                .product(name: "QuiverRuntimeTesting", package: "quiver-runtime"),
             ],
             path: "Tests/QUICTests"
         ),
