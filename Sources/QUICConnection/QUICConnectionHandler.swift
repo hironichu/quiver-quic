@@ -141,8 +141,8 @@ package final class QUICConnectionHandler: Sendable {
         destinationConnectionID: ConnectionID,
         transportParameters: TransportParameters,
         congestionControllerFactory: any CongestionControllerFactory = NewRenoFactory(),
-        maxDatagramSize: Int = ProtocolLimits.minimumMaximumDatagramSize
-    ) {
+        maxDatagramSize: Int = ProtocolLimits.minimumMaximumDatagramSize,
+        localConnectionIDGenerator: @escaping QUICConnectionIDGenerator = QUICConnectionIDGenerators.random) {
         self.maxDatagramSize = maxDatagramSize
 
         self.connectionState = Mutex(
@@ -177,7 +177,8 @@ package final class QUICConnectionHandler: Sendable {
         // Initialize connection migration components
         self.pathValidationManager = PathValidationManager()
         self.connectionIDManager = ConnectionIDManager(
-            activeConnectionIDLimit: UInt64(transportParameters.activeConnectionIDLimit)
+            activeConnectionIDLimit: UInt64(transportParameters.activeConnectionIDLimit),
+            connectionIDGenerator: localConnectionIDGenerator
         )
         self.statelessResetManager = StatelessResetManager()
 

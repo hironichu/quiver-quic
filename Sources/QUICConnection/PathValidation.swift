@@ -9,9 +9,9 @@ import QUICCore
 import Synchronization
 
 #if canImport(FoundationEssentials)
-    import FoundationEssentials
+import FoundationEssentials
 #else
-    import Foundation
+import Foundation
 #endif
 // MARK: - Path Validation State
 
@@ -20,25 +20,25 @@ public enum PathValidationState: Sendable {
     /// Validation not started
     case initial
 
-    /// Challenge sent, waiting for response
+        /// Challenge sent, waiting for response
     case pending(challengeData: Data, sentAt: ContinuousClock.Instant)
 
-    /// Path validated successfully
+                                /// Path validated successfully
     case validated(at: ContinuousClock.Instant)
 
-    /// Validation failed (timeout or other error)
+                       /// Validation failed (timeout or other error)
     case failed(reason: String)
 }
 
 /// Represents a network path (local + remote address pair)
 public struct NetworkPath: Hashable, Sendable {
     public let localAddress: String
-    public let remoteAddress: String
+        public let remoteAddress: String
 
-    public init(localAddress: String, remoteAddress: String) {
-        self.localAddress = localAddress
-        self.remoteAddress = remoteAddress
-    }
+        public init(localAddress: String, remoteAddress: String) {
+            self.localAddress = localAddress
+                self.remoteAddress = remoteAddress
+        }
 }
 
 // MARK: - Path Validation Manager
@@ -48,28 +48,28 @@ public final class PathValidationManager: Sendable {
 
     private let state = Mutex<ValidationState>(ValidationState())
 
-    private struct ValidationState: Sendable {
-        /// Pending path validations (path -> validation state)
-        var pendingValidations: [NetworkPath: PathValidationState] = [:]
+        private struct ValidationState: Sendable {
+            /// Pending path validations (path -> validation state)
+            var pendingValidations: [NetworkPath: PathValidationState] = [:]
 
-        /// Challenge data we've sent (for matching responses)
-        var pendingChallenges: [Data: NetworkPath] = [:]
+                /// Challenge data we've sent (for matching responses)
+                var pendingChallenges: [Data: NetworkPath] = [:]
 
-        /// Successfully validated paths
-        var validatedPaths: Set<NetworkPath> = []
+                /// Successfully validated paths
+                var validatedPaths: Set<NetworkPath> = []
 
-        /// Challenges received that need responses
-        var pendingResponses: [Data] = []
-    }
+                /// Challenges received that need responses
+                var pendingResponses: [Data] = []
+        }
 
     /// Timeout for path validation (RFC 9000 recommends 3 * PTO)
     public let validationTimeout: Duration
 
-    // MARK: - Initialization
+        // MARK: - Initialization
 
-    public init(validationTimeout: Duration = .seconds(3)) {
-        self.validationTimeout = validationTimeout
-    }
+        public init(validationTimeout: Duration = .seconds(3)) {
+            self.validationTimeout = validationTimeout
+        }
 
     // MARK: - Initiating Validation
 
@@ -79,13 +79,13 @@ public final class PathValidationManager: Sendable {
     public func startValidation(for path: NetworkPath) -> Data {
         let challengeData = generateChallengeData()
 
-        state.withLock { s in
-            s.pendingValidations[path] = .pending(
-                challengeData: challengeData,
-                sentAt: .now
-            )
-            s.pendingChallenges[challengeData] = path
-        }
+            state.withLock { s in
+                s.pendingValidations[path] = .pending(
+                        challengeData: challengeData,
+                        sentAt: .now
+                        )
+                    s.pendingChallenges[challengeData] = path
+            }
 
         return challengeData
     }
@@ -95,7 +95,7 @@ public final class PathValidationManager: Sendable {
     /// - Returns: The PATH_CHALLENGE frame
     public func createChallengeFrame(for path: NetworkPath) -> Frame {
         let data = startValidation(for: path)
-        return .pathChallenge(data)
+            return .pathChallenge(data)
     }
 
     // MARK: - Processing Received Frames
@@ -123,9 +123,9 @@ public final class PathValidationManager: Sendable {
 
             // Path validated successfully
             s.pendingValidations[path] = .validated(at: .now)
-            s.validatedPaths.insert(path)
+                s.validatedPaths.insert(path)
 
-            return path
+                return path
         }
     }
 
@@ -154,8 +154,8 @@ public final class PathValidationManager: Sendable {
     public func getPendingResponses() -> [Data] {
         state.withLock { s in
             let responses = s.pendingResponses
-            s.pendingResponses.removeAll()
-            return responses
+                s.pendingResponses.removeAll()
+                return responses
         }
     }
 
@@ -165,19 +165,19 @@ public final class PathValidationManager: Sendable {
     /// - Returns: Paths that failed due to timeout
     public func checkTimeouts() -> [NetworkPath] {
         let now = ContinuousClock.now
-        var failedPaths: [NetworkPath] = []
+            var failedPaths: [NetworkPath] = []
 
-        state.withLock { s in
-            for (path, validationState) in s.pendingValidations {
-                if case .pending(let data, let sentAt) = validationState {
-                    if now - sentAt > validationTimeout {
-                        s.pendingValidations[path] = .failed(reason: "timeout")
-                        s.pendingChallenges.removeValue(forKey: data)
-                        failedPaths.append(path)
+            state.withLock { s in
+                for (path, validationState) in s.pendingValidations {
+                    if case .pending(let data, let sentAt) = validationState {
+                        if now - sentAt > validationTimeout {
+                            s.pendingValidations[path] = .failed(reason: "timeout")
+                                s.pendingChallenges.removeValue(forKey: data)
+                                failedPaths.append(path)
+                        }
                     }
                 }
             }
-        }
 
         return failedPaths
     }
@@ -188,19 +188,19 @@ public final class PathValidationManager: Sendable {
     public func retryValidation(for path: NetworkPath) -> Data? {
         return state.withLock { s in
             guard let currentState = s.pendingValidations[path],
-                case .failed = currentState
-            else {
-                return nil
-            }
+            case .failed = currentState
+                else {
+                    return nil
+                }
 
-            let challengeData = generateChallengeData()
-            s.pendingValidations[path] = .pending(
-                challengeData: challengeData,
-                sentAt: .now
-            )
-            s.pendingChallenges[challengeData] = path
+                let challengeData = generateChallengeData()
+                    s.pendingValidations[path] = .pending(
+                            challengeData: challengeData,
+                            sentAt: .now
+                            )
+                    s.pendingChallenges[challengeData] = path
 
-            return challengeData
+                    return challengeData
         }
     }
 
@@ -219,39 +219,40 @@ public final class PathValidationManager: Sendable {
 public final class ConnectionIDManager: Sendable {
 
     private let state = Mutex<CIDState>(CIDState())
+    private let connectionIDGenerator: QUICConnectionIDGenerator
 
-    private struct CIDState: Sendable {
-        /// Our issued connection IDs (sequence number -> CID info)
-        var issuedCIDs: [UInt64: IssuedConnectionID] = [:]
+        private struct CIDState: Sendable {
+            /// Our issued connection IDs (sequence number -> CID info)
+            var issuedCIDs: [UInt64: IssuedConnectionID] = [:]
 
-        /// Next sequence number for issuing new CIDs
-        var nextSequenceNumber: UInt64 = 0
+                /// Next sequence number for issuing new CIDs
+                var nextSequenceNumber: UInt64 = 0
 
-        /// Peer's connection IDs we can use
-        var peerCIDs: [UInt64: PeerConnectionID] = [:]
+                /// Peer's connection IDs we can use
+                var peerCIDs: [UInt64: PeerConnectionID] = [:]
 
-        /// Current active peer CID (for sending)
-        var activePeerCID: ConnectionID?
+                /// Current active peer CID (for sending)
+                var activePeerCID: ConnectionID?
 
-        /// Retired sequence numbers
-        var retiredSequences: Set<UInt64> = []
-    }
+                /// Retired sequence numbers
+                var retiredSequences: Set<UInt64> = []
+        }
 
     /// Info about a CID we issued
     public struct IssuedConnectionID: Sendable {
         public let connectionID: ConnectionID
-        public let sequenceNumber: UInt64
-        public let statelessResetToken: Data
-        public let issuedAt: ContinuousClock.Instant
-        public var isRetired: Bool
+            public let sequenceNumber: UInt64
+            public let statelessResetToken: Data
+            public let issuedAt: ContinuousClock.Instant
+            public var isRetired: Bool
     }
 
     /// Info about a peer's CID
     public struct PeerConnectionID: Sendable {
         public let connectionID: ConnectionID
-        public let sequenceNumber: UInt64
-        public let statelessResetToken: Data
-        public let receivedAt: ContinuousClock.Instant
+            public let sequenceNumber: UInt64
+            public let statelessResetToken: Data
+            public let receivedAt: ContinuousClock.Instant
     }
 
     /// Maximum number of active CIDs (from transport parameters)
@@ -259,8 +260,12 @@ public final class ConnectionIDManager: Sendable {
 
     // MARK: - Initialization
 
-    public init(activeConnectionIDLimit: UInt64 = 2) {
+    public init(
+        activeConnectionIDLimit: UInt64 = 2,
+        connectionIDGenerator: @escaping QUICConnectionIDGenerator = QUICConnectionIDGenerators.random
+    ) {
         self.activeConnectionIDLimit = activeConnectionIDLimit
+        self.connectionIDGenerator = connectionIDGenerator
     }
 
     // MARK: - Issuing Connection IDs
@@ -271,28 +276,26 @@ public final class ConnectionIDManager: Sendable {
     /// - Throws: If the length is invalid or frame creation fails
     public func issueNewConnectionID(length: Int = 8) throws -> NewConnectionIDFrame {
         return try state.withLock { s in
-            guard let cid = ConnectionID.random(length: length) else {
-                throw ConnectionIDError.invalidLength(length)
-            }
-            let token = generateStatelessResetToken()
-            let seq = s.nextSequenceNumber
-            s.nextSequenceNumber += 1
+            let cid = try connectionIDGenerator(length)
+                let token = generateStatelessResetToken()
+                let seq = s.nextSequenceNumber
+                s.nextSequenceNumber += 1
 
-            let issued = IssuedConnectionID(
-                connectionID: cid,
-                sequenceNumber: seq,
-                statelessResetToken: token,
-                issuedAt: .now,
-                isRetired: false
-            )
-            s.issuedCIDs[seq] = issued
+                let issued = IssuedConnectionID(
+                        connectionID: cid,
+                        sequenceNumber: seq,
+                        statelessResetToken: token,
+                        issuedAt: .now,
+                        isRetired: false
+                        )
+                s.issuedCIDs[seq] = issued
 
-            return try NewConnectionIDFrame(
-                sequenceNumber: seq,
-                retirePriorTo: 0,
-                connectionID: cid,
-                statelessResetToken: token
-            )
+                return try NewConnectionIDFrame(
+                        sequenceNumber: seq,
+                        retirePriorTo: 0,
+                        connectionID: cid,
+                        statelessResetToken: token
+                )
         }
     }
 
@@ -300,9 +303,9 @@ public final class ConnectionIDManager: Sendable {
     public enum ConnectionIDError: Error, Sendable, Equatable {
         /// Invalid connection ID length
         case invalidLength(Int)
-        /// Duplicate sequence number with different CID or token (RFC 9000 §5.1.1)
+            /// Duplicate sequence number with different CID or token (RFC 9000 §5.1.1)
         case duplicateSequenceNumber(sequenceNumber: UInt64)
-        /// Exceeded active_connection_id_limit
+                                                     /// Exceeded active_connection_id_limit
         case exceededConnectionIDLimit(limit: UInt64, current: Int)
     }
 
@@ -326,19 +329,19 @@ public final class ConnectionIDManager: Sendable {
                 // If CID and token match exactly, just ignore the duplicate
                 if existing.connectionID == frame.connectionID
                     && existing.statelessResetToken == frame.statelessResetToken
-                {
-                    return  // Ignore exact duplicate
-                }
+                    {
+                        return  // Ignore exact duplicate
+                    }
                 // Different CID or token with same sequence = PROTOCOL_VIOLATION
                 throw ConnectionIDError.duplicateSequenceNumber(
-                    sequenceNumber: frame.sequenceNumber
-                )
+                        sequenceNumber: frame.sequenceNumber
+                        )
             }
 
             // Retire CIDs as requested by retire_prior_to
             for seq in 0..<frame.retirePriorTo {
                 s.peerCIDs.removeValue(forKey: seq)
-                s.retiredSequences.insert(seq)
+                    s.retiredSequences.insert(seq)
             }
 
             // RFC 9000 §5.1.1: Enforce active_connection_id_limit
@@ -348,29 +351,29 @@ public final class ConnectionIDManager: Sendable {
             // Retired CIDs don't count.
             let activeCIDCount = s.peerCIDs.count
 
-            // If we are adding a NEW one (which we are, since we passed the duplicate check),
-            // we must ensure we don't exceed the limit.
-            if activeCIDCount >= Int(activeConnectionIDLimit) {
-                // We're at or over the limit - peer is violating our limit
-                throw ConnectionIDError.exceededConnectionIDLimit(
-                    limit: activeConnectionIDLimit,
-                    current: activeCIDCount + 1  // +1 for the new CID they're trying to add
-                )
-            }
+                // If we are adding a NEW one (which we are, since we passed the duplicate check),
+                // we must ensure we don't exceed the limit.
+                if activeCIDCount >= Int(activeConnectionIDLimit) {
+                    // We're at or over the limit - peer is violating our limit
+                    throw ConnectionIDError.exceededConnectionIDLimit(
+                            limit: activeConnectionIDLimit,
+                            current: activeCIDCount + 1  // +1 for the new CID they're trying to add
+                            )
+                }
 
             // Store new CID
             let peerCID = PeerConnectionID(
-                connectionID: frame.connectionID,
-                sequenceNumber: frame.sequenceNumber,
-                statelessResetToken: frame.statelessResetToken,
-                receivedAt: .now
-            )
-            s.peerCIDs[frame.sequenceNumber] = peerCID
+                    connectionID: frame.connectionID,
+                    sequenceNumber: frame.sequenceNumber,
+                    statelessResetToken: frame.statelessResetToken,
+                    receivedAt: .now
+                    )
+                s.peerCIDs[frame.sequenceNumber] = peerCID
 
-            // Update active CID if needed
-            if s.activePeerCID == nil {
-                s.activePeerCID = frame.connectionID
-            }
+                // Update active CID if needed
+                if s.activePeerCID == nil {
+                    s.activePeerCID = frame.connectionID
+                }
         }
     }
 
@@ -383,8 +386,8 @@ public final class ConnectionIDManager: Sendable {
                 return nil
             }
             cid.isRetired = true
-            s.issuedCIDs[sequenceNumber] = cid
-            return cid
+                s.issuedCIDs[sequenceNumber] = cid
+                return cid
         }
     }
 
@@ -404,7 +407,7 @@ public final class ConnectionIDManager: Sendable {
                 return false
             }
             s.activePeerCID = peerCID.connectionID
-            return true
+                return true
         }
     }
 
@@ -424,7 +427,7 @@ public final class ConnectionIDManager: Sendable {
                 return nil
             }
             s.retiredSequences.insert(sequenceNumber)
-            return .retireConnectionID(sequenceNumber)
+                return .retireConnectionID(sequenceNumber)
         }
     }
 

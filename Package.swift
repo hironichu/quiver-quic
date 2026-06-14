@@ -15,9 +15,9 @@ func nioDependencies() -> [Package.Dependency] {
         ]
     } else {
         return [
-            .package(url: "https://github.com/apple/swift-nio.git", branch: "pr-3433"),
-            .package(url: "https://github.com/apple/swift-nio-ssl.git", branch: "pr-567-windows-support"),
-            .package(url: "https://github.com/apple/swift-system.git", from: "1.6.4"),
+            .package(url: "https://github.com/apple/swift-nio.git",from: "2.101.0"),
+            .package(url: "https://github.com/apple/swift-nio-ssl.git", from: "2.37.1"),
+            .package(url: "https://github.com/apple/swift-system.git", from: "1.6.5"),
         ]
     }
 }
@@ -26,7 +26,7 @@ func runtimeDependencies() -> [Package.Dependency] {
     if FileManager.default.fileExists(atPath: "../quiver-runtime") {
         return [.package(path: "../quiver-runtime")]
     } else {
-        return []
+        return [.package(url: "https://github.com/hironichu/quiver-runtime.git", branch: "main")]
     }
 }
 
@@ -50,8 +50,14 @@ let package = Package(
         .library(name: "QUICConnection", targets: ["QUICConnection"]),
         .library(name: "QuiverTestSupport", targets: ["QuiverTestSupport"]),
     ],
+    traits: [
+        .trait(
+            name: "quiverRuntime",
+            description: "Enables the native Quiver runtime-backed QUIC socket in addition to the default SwiftNIO backend."
+        ),
+    ],
     dependencies: nioDependencies() + runtimeDependencies() + [
-        .package(url: "https://github.com/apple/swift-crypto.git", "3.0.0"..<"4.5.0"),
+        .package(url: "https://github.com/apple/swift-crypto.git", from: "4.1.0"),
         .package(url: "https://github.com/apple/swift-certificates.git", from: "1.17.0"),
         .package(url: "https://github.com/apple/swift-asn1.git", from: "1.0.0"),
         .package(url: "https://github.com/apple/swift-log.git", from: "1.12.0"),
@@ -116,10 +122,13 @@ let package = Package(
             dependencies: [
                 "QUICCore",
                 "NIOUDPTransport",
-                .product(name: "QuiverRuntimeCore", package: "quiver-runtime"),
+                .product(name: "QuiverRuntimeCore", package: "quiver-runtime", condition: .when(traits: ["quiverRuntime"])),
                 .product(name: "SystemPackage", package: "swift-system"),
             ],
-            path: "Sources/QUICTransport"
+            path: "Sources/QUICTransport",
+            swiftSettings: [
+                .define("QUIVER_RUNTIME", .when(traits: ["quiverRuntime"])),
+            ]
         ),
         .target(
             name: "QUIC",
@@ -182,10 +191,13 @@ let package = Package(
                 "QUICRecovery",
                 "QUICTransport",
                 "QuiverTestSupport",
-                .product(name: "QuiverRuntimeCore", package: "quiver-runtime"),
-                .product(name: "QuiverRuntimeTesting", package: "quiver-runtime"),
+                .product(name: "QuiverRuntimeCore", package: "quiver-runtime", condition: .when(traits: ["quiverRuntime"])),
+                .product(name: "QuiverRuntimeTesting", package: "quiver-runtime", condition: .when(traits: ["quiverRuntime"])),
             ],
-            path: "Tests/QUICTests"
+            path: "Tests/QUICTests",
+            swiftSettings: [
+                .define("QUIVER_RUNTIME", .when(traits: ["quiverRuntime"])),
+            ]
         ),
         .testTarget(
             name: "QUICBenchmarks",

@@ -271,6 +271,13 @@ public struct QUICConfiguration: Sendable {
     /// Preferred connection ID length (default: 8)
     public var connectionIDLength: Int
 
+    /// Backend ID to encode in locally-issued routable connection IDs.
+    ///
+    /// When set, server-local connection IDs use the routable 16-byte format.
+    /// When unset, local connection IDs use the normal random generator and
+    /// respect ``connectionIDLength``.
+    public var routableConnectionIDBackendID: UInt16?
+
     // MARK: - Stateless Reset
 
     /// Static key for generating deterministic Stateless Reset Tokens (RFC 9000 Section 10.3).
@@ -411,6 +418,7 @@ public struct QUICConfiguration: Sendable {
         self.maxAckDelay = .milliseconds(25)
         self.ackDelayExponent = 3
         self.connectionIDLength = 8
+        self.routableConnectionIDBackendID = nil
         self.statelessResetKey = nil
         self.version = .v1
         self.alpn = ["h3"]
@@ -418,7 +426,6 @@ public struct QUICConfiguration: Sendable {
         self.userTrustedCAsPEMPath = nil
         self.useSystemTrustStore = true
         self.verifyPeer = true
-        self.certificateValidator = nil
         self.certificateValidator = nil
         self.enableDatagrams = false
         self.maxDatagramFrameSize = 65535
@@ -452,6 +459,21 @@ public struct QUICConfiguration: Sendable {
                 return "connectionIDLength (\(length)) outside valid range 0...20"
             }
         }
+    }
+    /// Creates the local connection ID generator for this configuration.
+    public func makeLocalConnectionIDGenerator() -> QUICConnectionIDGenerator {
+        if let backendID = routableConnectionIDBackendID {
+            return RoutableQUICConnectionIDGenerator(
+                backendID: backendID
+            ).asQUICConnectionIDGenerator
+        }
+
+        return QUICConnectionIDGenerators.random
+    }
+
+    /// Creates a local connection ID for this configuration.
+    public func makeLocalConnectionID() throws -> ConnectionID {
+        try makeLocalConnectionIDGenerator()(connectionIDLength)
     }
 
     /// Validates internal consistency of the configuration.
@@ -552,6 +574,7 @@ public struct QUICConfiguration: Sendable {
             return config
         }
     #endif
+
 }
 
 // MARK: - Transport Parameters Extension

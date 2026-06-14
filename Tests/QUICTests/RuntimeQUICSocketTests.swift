@@ -1,3 +1,4 @@
+#if QUIVER_RUNTIME
 import NIOCore
 import NIOUDPTransport
 import QUICTransport
@@ -130,3 +131,4 @@ private extension NSLock {
         return try body()
     }
 }
+#endif

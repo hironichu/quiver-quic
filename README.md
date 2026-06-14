@@ -42,6 +42,15 @@ let socket = try QUICSocketFactory.makeSocket(
 
 The high-level `QUICEndpoint.serve(host:port:configuration:socketBackend:)` and `QUICEndpoint.dial(address:timeout:socketBackend:)` convenience APIs also accept the same backend selector. HTTP/3, WebTransport, MOQ, and adapters should continue depending on QUIC rather than selecting epoll, NIO, or future IOCP/io_uring backends themselves.
 
+The runtime backend is gated by the SwiftPM trait `quiverRuntime`. Default builds expose the NIO backend only. Enable the runtime backend with:
+
+```bash
+swift build --traits quiverRuntime
+swift test --traits quiverRuntime --filter RuntimeQUICSocketTests
+```
+
+When the trait is enabled, `QUICSocketBackend.runtime(...)` and `RuntimeQUICSocket` are compiled. When it is disabled, the package stays on the default NIO path.
+
 ## Installation
 
 Add the package to your `Package.swift`:

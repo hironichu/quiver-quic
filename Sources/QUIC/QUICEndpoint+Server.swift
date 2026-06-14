@@ -130,11 +130,8 @@ extension QUICEndpoint {
         -> ManagedConnection
     {
         // Generate our source connection ID
-        // Note: length 8 is always valid (0-20 allowed), so random() will never return nil
-        guard let sourceConnectionID = ConnectionID.random(length: 8) else {
-            throw QUICError.internalError("Failed to generate connection ID")
-        }
-
+        let localConnectionIDGenerator = configuration.makeLocalConnectionIDGenerator()
+        let sourceConnectionID = try localConnectionIDGenerator(configuration.connectionIDLength)
         // Create TLS provider (fails if not configured)
         let tlsProvider = try createTLSProvider(isClient: false)
 
@@ -162,7 +159,8 @@ extension QUICEndpoint {
             congestionControllerFactory: configuration.congestionControllerFactory,
             localAddress: _localAddress,
             remoteAddress: info.remoteAddress,
-            maxDatagramSize: configuration.maxUDPPayloadSize
+            maxDatagramSize: configuration.maxUDPPayloadSize,
+            localConnectionIDGenerator: localConnectionIDGenerator
         )
 
         // Enable ECN if the socket was created with ECN support

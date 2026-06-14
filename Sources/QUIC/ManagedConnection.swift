@@ -158,7 +158,8 @@ public final class ManagedConnection: Sendable {
         tlsProvider: any TLS13Provider,
         localAddress: SocketAddress? = nil,
         remoteAddress: SocketAddress,
-        maxDatagramSize: Int = ProtocolLimits.minimumMaximumDatagramSize
+        maxDatagramSize: Int = ProtocolLimits.minimumMaximumDatagramSize,
+        localConnectionIDGenerator: @escaping QUICConnectionIDGenerator = QUICConnectionIDGenerators.random
     ) {
         self.init(
             role: role,
@@ -171,7 +172,8 @@ public final class ManagedConnection: Sendable {
             congestionControllerFactory: NewRenoFactory(),
             localAddress: localAddress,
             remoteAddress: remoteAddress,
-            maxDatagramSize: maxDatagramSize
+            maxDatagramSize: maxDatagramSize,
+            localConnectionIDGenerator: localConnectionIDGenerator
         )
     }
 
@@ -206,7 +208,8 @@ public final class ManagedConnection: Sendable {
         congestionControllerFactory: any CongestionControllerFactory,
         localAddress: SocketAddress? = nil,
         remoteAddress: SocketAddress,
-        maxDatagramSize: Int = ProtocolLimits.minimumMaximumDatagramSize
+        maxDatagramSize: Int = ProtocolLimits.minimumMaximumDatagramSize,
+        localConnectionIDGenerator: @escaping QUICConnectionIDGenerator = QUICConnectionIDGenerators.random
     ) {
         self.incomingDatagramState = Mutex(IncomingDatagramState())
         self.handler = QUICConnectionHandler(
@@ -216,7 +219,8 @@ public final class ManagedConnection: Sendable {
             destinationConnectionID: destinationConnectionID,
             transportParameters: transportParameters,
             congestionControllerFactory: congestionControllerFactory,
-            maxDatagramSize: maxDatagramSize
+            maxDatagramSize: maxDatagramSize,
+            localConnectionIDGenerator: localConnectionIDGenerator
         )
         self.packetProcessor = PacketProcessor(
             dcidLength: sourceConnectionID.length,
@@ -226,7 +230,8 @@ public final class ManagedConnection: Sendable {
         self.amplificationLimiter = AntiAmplificationLimiter(isServer: role == .server)
         self.pathValidationManager = PathValidationManager()
         self.connectionIDManager = ConnectionIDManager(
-            activeConnectionIDLimit: transportParameters.activeConnectionIDLimit
+            activeConnectionIDLimit: transportParameters.activeConnectionIDLimit,
+            connectionIDGenerator: localConnectionIDGenerator
         )
         self.localAddress = localAddress
         self.remoteAddress = remoteAddress
